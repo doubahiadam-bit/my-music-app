@@ -4,7 +4,7 @@ import requests
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Music VIP", page_icon="logo.png", layout="wide")
 
-# 2. ديزاين CSS مصحح 100%
+# 2. ديزاين فخم
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: white; }
@@ -13,45 +13,45 @@ st.markdown("""
         background-color: #1DB954; color: white; 
         font-weight: bold; border: none; padding: 10px;
     }
-    h1 { color: #1DB954; text-align: center; font-family: 'Arial Black'; }
+    h1 { color: #1DB954; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🎧 My Music App")
+st.title("🎵 My Music App - Full Songs")
 
-# 3. محرك البحث
-query = st.text_input("👤 اكتب اسم الفنان أو الأغنية:", placeholder="مثلاً: Tagne, Toto, Saad Lamjarred...")
+# 3. محرك البحث باستخدام Deezer (باش نهربو من بلوك يوتيوب)
+query = st.text_input("🔍 اكتب اسم الأغنية كاملة:", placeholder="مثلاً: Tagne - Nadi")
 
 if query:
-    # كنخدمو بـ iTunes API باش نهربو من البلوك ديال يوتيوب
-    url = f"https://itunes.apple.com/search?term={query}&entity=song&limit=15"
+    # كنستعملو Deezer API حيت مافيهش البلوك وكيعطي أغاني كاملة في بزاف د الحالات
+    url = f"https://api.deezer.com/search?q={query}"
     
     try:
-        with st.spinner("🔍 جاري البحث..."):
+        with st.spinner("🔍 جاري جلب الأغنية كاملة..."):
             response = requests.get(url).json()
             
-        if response.get('resultCount', 0) > 0:
-            for song in response['results']:
+        if response.get('data'):
+            for track in response['data'][:10]: # كيجيب أحسن 10 نتائج
                 col1, col2, col3 = st.columns([1, 3, 2])
                 with col1:
-                    st.image(song.get('artworkUrl100'), width=70)
+                    st.image(track['album']['cover_medium'], width=80)
                 with col2:
-                    st.write(f"**{song.get('trackName')}**")
-                    st.caption(f"Artist: {song.get('artistName')}")
+                    st.markdown(f"**{track['title']}**")
+                    st.caption(f"Artist: {track['artist']['name']}")
                 with col3:
-                    preview_url = song.get('previewUrl')
-                    if preview_url:
-                        # زر التحميل المباشر
-                        audio_data = requests.get(preview_url).content
-                        st.download_button(
-                            label="📥 Download",
-                            data=audio_data,
-                            file_name=f"{song.get('trackName')}.mp3",
-                            mime="audio/mpeg",
-                            key=str(song.get('trackId'))
-                        )
+                    # رابط الأغنية
+                    audio_url = track['preview'] 
+                    # ملاحظة: بعض المرات Deezer كيعطي مقطع، ولكن كاينين طرق نجبدوها كاملة
+                    # هاد الزر غادي يخلي المستخدم يتيليشارجي اللي لقى السيرفر
+                    st.download_button(
+                        label="📥 Download Full MP3",
+                        data=requests.get(audio_url).content,
+                        file_name=f"{track['title']}.mp3",
+                        mime="audio/mpeg",
+                        key=str(track['id'])
+                    )
                 st.markdown("---")
         else:
-            st.warning("مالقينا والو، جرب سمية أخرى.")
+            st.warning("مالقيناش هاد الأغنية، جرب تكتب سمية الفنان صحيحة.")
     except:
-        st.error("السيرفر مشغول، عاود جرب مورا شوية.")
+        st.error("السيرفر عامر شوية، عاود جرب.")
