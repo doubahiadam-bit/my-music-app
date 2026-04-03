@@ -1,81 +1,80 @@
 import streamlit as st
-import requests
+import yt_dlp
+import os
 
-# إعدادات الصفحة (Icon المتصفح)
 st.set_page_config(page_title="Music VIP", page_icon="🎵", layout="wide")
 
-# --- CUSTOM DESIGN (CSS) ---
+# --- DESIGN ---
 st.markdown("""
     <style>
-    /* تغيير الخلفية للأسود الفخم */
-    .stApp {
-        background-color: #0e1117;
-    }
-    /* تحسين شكل الأزرار */
-    .stButton>button {
-        width: 100%;
-        border-radius: 25px;
-        background-color: #1DB954; /* أخضر سبوتيفاي */
-        color: white;
-        font-weight: bold;
-        border: none;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #1ed760;
-        transform: scale(1.02);
-    }
-    /* تنسيق كروت الأغاني */
-    .song-container {
-        background-color: #1a1c24;
-        padding: 15px;
-        border-radius: 15px;
-        margin-bottom: 10px;
-        border: 1px solid #333;
-    }
+    .stApp { background-color: #0e1117; }
+    .stButton>button { border-radius: 20px; background-color: #1DB954; color: white; }
     h1 { color: #1DB954; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🚀 My Custom Music App")
+st.title("🚀 Full Music Downloader")
 
-# --- SEARCH ---
-artist = st.text_input("👤 اكتب اسم الفنان (مثلاً: Tagne أو Moro):", placeholder="قلب على الفنان المفضل عندك...")
+artist = st.text_input("👤 اكتب اسم الفنان (مثلاً: Lbenj):")
 
 if artist:
-    # طلب 50 أغنية (يعني كاع الموسيقى ديالو تقريبا)
-    url = f"https://api.deezer.com/search?q={artist}&limit=50"
-    
+    # إعدادات البحث عن كاع الأغاني (Full Info)
+    search_opts = {
+        'format': 'bestaudio/best',
+        'default_search': 'ytsearch15', # كيجيب 15 أغنية
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,
+    }
+
     try:
-        response = requests.get(url).json()
-        if response.get('data'):
-            st.success(f"لقينا {len(response['data'])} أغنية لـ {artist}")
-            
-            for song in response['data']:
-                # تصميم "كرت" لكل أغنية
-                with st.container():
-                    col1, col2, col3 = st.columns([1, 3, 2])
-                    
-                    with col1:
-                        st.image(song['album']['cover_medium'], width=80)
-                    
-                    with col2:
-                        st.markdown(f"### {song['title']}")
-                        st.caption(f"Album: {song['album']['title']}")
-                    
-                    with col3:
-                        # تحميل الصوت
-                        audio_url = song['preview']
-                        audio_data = requests.get(audio_url).content
-                        st.download_button(
-                            label="📥 Download MP3",
-                            data=audio_data,
-                            file_name=f"{song['title']}.mp3",
-                            mime="audio/mpeg",
-                            key=str(song['id']) # ID فريد لكل زر
-                        )
+        with st.status(f"🔍 جاري جلب قائمة أغاني {artist}..."):
+            with yt_dlp.YoutubeDL(search_opts) as ydl:
+                results = ydl.extract_info(f"ytsearch15:{artist}", download=False)
+                songs = results['entries']
+
+        for song in songs:
+            with st.container():
+                col1, col2 = st.columns([4, 1])
+                title = song.get('title')
+                url = song.get('url')
+                
+                with col1:
+                    st.markdown(f"🎵 **{title}**")
+                
+                with col2:
+                    if st.button("📥 Download", key=url):
+                        with st.spinner("جاري التحميل (كاملة)..."):
+                            # إعدادات التحميل الكامل
+                            dl_opts = {
+                                'format': 'bestaudio/best',
+                                'postprocessors': [{
+                                    'key': 'FFmpegExtractAudio',
+                                    'preferredcodec': 'mp3',
+                                    'preferredquality': '192',
+                                }],
+                                'outtmpl': 'full_song.%(ext)s',
+                                'nocheckcertificate': True,
+                                # هاد السطر كيهرب من البلوك ديال 403
+                                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                            }
+                            
+                            try:
+                                if os.path.exists("full_song.mp3"): os.remove("full_song.mp3")
+                                with yt_dlp.YoutubeDL(dl_opts) as ydl_dl:
+                                    ydl_dl.download([url])
+                                
+                                if os.path.exists("full_song.mp3"):
+                                    with open("full_song.mp3", "rb") as f:
+                                        st.download_button(
+                                            label="✅ اضغط للحفظ",
+                                            data=f,
+                                            file_name=f"{title}.mp3",
+                                            mime="audio/mpeg"
+                                        )
+                            except Exception as e:
+                                st.error("يوتيوب مزير هاد الساعة، جرب مورا شوية.")
+
                 st.markdown("---")
-        else:
-            st.warning("ما لقينا والو، جرب سمية فنان آخر.")
-    except Exception as e:
-        st.error("السيرفر عامر، عاود جرب مورا شوية.")
+    except:
+        st.error("مشكل في البحث.")
