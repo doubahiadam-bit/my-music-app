@@ -1,62 +1,62 @@
 import streamlit as st
 import yt_dlp
+import os
 
-# 1. إعدادات الصفحة والديزاين
+# 1. إعدادات الصفحة
 st.set_page_config(page_title="Music VIP", page_icon="logo.png", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: white; }
-    .song-card { background: #1a1c24; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 5px solid #1DB954; }
-    h1 { color: #1DB954; text-align: center; }
+    .song-card { background: #1a1c24; padding: 20px; border-radius: 15px; border-left: 5px solid #1DB954; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🎧 My Full Music Player")
+st.title("📥 Direct Music Downloader")
 
-# 2. محرك البحث
-query = st.text_input("🔍 اكتب اسم الفنان أو الأغنية:", placeholder="مثلاً: Tagne, Toto, Saad Lamjarred...")
+query = st.text_input("🔍 اكتب اسم الأغنية أو الفنان:", placeholder="مثلاً: Tagne - Nadi")
 
 if query:
     try:
-        with st.spinner(f"🎵 جاري جلب أغاني {query}..."):
-            # إعدادات البحث والتحميل
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'noplaylist': True,
-                'quiet': True,
-                'default_search': 'ytsearch10', # غايجيب ليك 10 ديال الأغاني
-                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
+        # البحث عن فيديو واحد باش نتيليشارجيوه
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': 'song.%(ext)s', # سمية الملف اللي غيتسيفا في السيرفر
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'quiet': True,
+            'default_search': 'ytsearch1',
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
+        }
 
+        with st.status("⏳ جاري تحميل الأغنية كاملة للسيرفر..."):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(query, download=False)
-                
+                info = ydl.extract_info(query, download=True)
+                # في حالة يوتيوب سيرش، كيكون الفيديو داخل 'entries'
                 if 'entries' in info:
-                    for entry in info['entries']:
-                        with st.container():
-                            st.markdown(f'<div class="song-card">', unsafe_allow_html=True)
-                            col1, col2 = st.columns([1, 2])
-                            
-                            with col1:
-                                if 'thumbnail' in entry:
-                                    st.image(entry['thumbnail'], use_container_width=True)
-                            
-                            with col2:
-                                st.subheader(entry.get('title', 'Unknown Title'))
-                                st.write(f"⏱️ المدة: {entry.get('duration_string', '??')}")
-                                
-                                # هادا هو المشغل اللي غيخليك تسمع الأغنية كاملة فوسط الـ App
-                                audio_url = entry.get('url')
-                                if audio_url:
-                                    st.audio(audio_url)
-                                    
-                                    # زر التحميل المباشر من وسط الـ App
-                                    st.markdown(f'<a href="{audio_url}" download="{entry["title"]}.mp3" style="text-decoration:none;"><button style="width:100%; border-radius:20px; background-color:#1DB954; color:white; padding:10px; border:none; cursor:pointer; font-weight:bold;">📥 تحميل MP3 كاملة</button></a>', unsafe_allow_html=True)
-                            
-                            st.markdown('</div>', unsafe_allow_html=True)
+                    video_info = info['entries'][0]
                 else:
-                    st.warning("مالقينا حتى أغنية، جرب سمية أخرى.")
-                    
+                    video_info = info
+                
+                title = video_info.get('title', 'music')
+                # السيرفر غالبا غيسميه song.mp3 بفضل الإعدادات فوق
+                file_path = "song.mp3"
+
+            if os.path.exists(file_path):
+                with open(file_path, "rb") as f:
+                    st.success(f"✅ واجدة: {title}")
+                    st.audio(f) # مشغل صوتي كامل
+                    st.download_button(
+                        label="📥 برك هنا باش تليشارجي MP3",
+                        data=f,
+                        file_name=f"{title}.mp3",
+                        mime="audio/mpeg"
+                    )
+                # كنمحو الملف من السيرفر مورا ما المستخدم كيشوفو باش ما يعمرش الستوراج
+                os.remove(file_path)
+
     except Exception as e:
-        st.error("⚠️ يوتيوب حظر السيرفر حالياً. جرب دير 'Reboot' للتطبيق من إعدادات Streamlit.")
+        st.error("⚠️ يوتيوب حابس السيرفر دابا. الحل هو دير 'Reboot App' من إعدادات Streamlit باش يتبدل الـ IP.")
