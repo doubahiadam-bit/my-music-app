@@ -1,47 +1,58 @@
 import streamlit as st
 import requests
 
-# إعدادات الصفحة والأيقونة (الأيقونة كتبان في المتصفح)
+# إعدادات الصفحة (Icon المتصفح)
 st.set_page_config(page_title="Music VIP", page_icon="🎵", layout="wide")
 
 # --- CUSTOM DESIGN (CSS) ---
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; }
+    /* تغيير الخلفية للأسود الفخم */
+    .stApp {
+        background-color: #0e1117;
+    }
+    /* تحسين شكل الأزرار */
     .stButton>button {
         width: 100%;
-        border-radius: 20px;
-        background-color: #1DB954; /* Green Spotify */
+        border-radius: 25px;
+        background-color: #1DB954; /* أخضر سبوتيفاي */
         color: white;
+        font-weight: bold;
         border: none;
+        transition: 0.3s;
     }
-    .song-card {
+    .stButton>button:hover {
+        background-color: #1ed760;
+        transform: scale(1.02);
+    }
+    /* تنسيق كروت الأغاني */
+    .song-container {
         background-color: #1a1c24;
         padding: 15px;
         border-radius: 15px;
         margin-bottom: 10px;
         border: 1px solid #333;
     }
-    h1 { color: #1DB954; text-align: center; font-family: 'Arial'; }
+    h1 { color: #1DB954; text-align: center; }
     </style>
-    """, unsafe_allow_label_True=True)
+    """, unsafe_allow_html=True)
 
-st.title("🎧 My Custom Music App")
+st.title("🚀 My Custom Music App")
 
 # --- SEARCH ---
-artist = st.text_input("👤 اكتب اسم الفنان (مثلاً: Toto أو Eljoee):", placeholder="قلب على الفنان المفضل عندك...")
+artist = st.text_input("👤 اكتب اسم الفنان (مثلاً: Tagne أو Moro):", placeholder="قلب على الفنان المفضل عندك...")
 
 if artist:
-    # طلب كاع الأغاني (زدنا الـ Limit لـ 50 أغنية)
+    # طلب 50 أغنية (يعني كاع الموسيقى ديالو تقريبا)
     url = f"https://api.deezer.com/search?q={artist}&limit=50"
     
     try:
-        data = requests.get(url).json()
-        if data.get('data'):
-            st.success(f"لقينا {len(data['data'])} أغنية لـ {artist}")
+        response = requests.get(url).json()
+        if response.get('data'):
+            st.success(f"لقينا {len(response['data'])} أغنية لـ {artist}")
             
-            # عرض الأغاني على شكل بطاقات (Cards)
-            for song in data['data']:
+            for song in response['data']:
+                # تصميم "كرت" لكل أغنية
                 with st.container():
                     col1, col2, col3 = st.columns([1, 3, 2])
                     
@@ -49,21 +60,22 @@ if artist:
                         st.image(song['album']['cover_medium'], width=80)
                     
                     with col2:
-                        st.markdown(f"**{song['title']}**")
+                        st.markdown(f"### {song['title']}")
                         st.caption(f"Album: {song['album']['title']}")
                     
                     with col3:
-                        # زر التحميل المباشر
-                        audio_data = requests.get(song['preview']).content
+                        # تحميل الصوت
+                        audio_url = song['preview']
+                        audio_data = requests.get(audio_url).content
                         st.download_button(
-                            label="📥 Download",
+                            label="📥 Download MP3",
                             data=audio_data,
                             file_name=f"{song['title']}.mp3",
                             mime="audio/mpeg",
-                            key=song['id']
+                            key=str(song['id']) # ID فريد لكل زر
                         )
                 st.markdown("---")
         else:
-            st.warning("ما لقينا حتى أغنية، تأكد من السمية.")
-    except:
-        st.error("السيرفر مشغول، عاود جرب.")
+            st.warning("ما لقينا والو، جرب سمية فنان آخر.")
+    except Exception as e:
+        st.error("السيرفر عامر، عاود جرب مورا شوية.")
