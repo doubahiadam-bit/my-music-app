@@ -1,42 +1,69 @@
 import streamlit as st
 import requests
-import os
 
-st.set_page_config(page_title="Music Downloader", page_icon="🎵")
-st.title("🎵 Music Downloader Pro")
-st.write("كتب سمية الأغنية وغادي نلقاوها ليك!")
+# إعدادات الصفحة والأيقونة (الأيقونة كتبان في المتصفح)
+st.set_page_config(page_title="Music VIP", page_icon="🎵", layout="wide")
 
-query = st.text_input("اسم الأغنية أو الفنان:", placeholder="مثال: Tagne Nadi")
+# --- CUSTOM DESIGN (CSS) ---
+st.markdown("""
+    <style>
+    .main { background-color: #0e1117; }
+    .stButton>button {
+        width: 100%;
+        border-radius: 20px;
+        background-color: #1DB954; /* Green Spotify */
+        color: white;
+        border: none;
+    }
+    .song-card {
+        background-color: #1a1c24;
+        padding: 15px;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        border: 1px solid #333;
+    }
+    h1 { color: #1DB954; text-align: center; font-family: 'Arial'; }
+    </style>
+    """, unsafe_allow_label_True=True)
 
-if query:
-    # هاد الرابط هو محرك بحث موسيقي كيخدم بـ API فابور
-    search_url = f"https://api.deezer.com/search?q={query}&limit=5"
+st.title("🎧 My Custom Music App")
+
+# --- SEARCH ---
+artist = st.text_input("👤 اكتب اسم الفنان (مثلاً: Toto أو Eljoee):", placeholder="قلب على الفنان المفضل عندك...")
+
+if artist:
+    # طلب كاع الأغاني (زدنا الـ Limit لـ 50 أغنية)
+    url = f"https://api.deezer.com/search?q={artist}&limit=50"
     
     try:
-        response = requests.get(search_url).json()
-        if response.get('data'):
-            st.success(f"لقينا 5 ديال النتائج لـ '{query}':")
+        data = requests.get(url).json()
+        if data.get('data'):
+            st.success(f"لقينا {len(data['data'])} أغنية لـ {artist}")
             
-            for song in response['data']:
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"**{song['title']}** - {song['artist']['name']}")
-                with col2:
-                    # التحميل المباشر من سيرفر Deezer (ما كيبلوكيش)
-                    audio_url = song['preview']
-                    audio_data = requests.get(audio_url).content
-                    st.download_button(
-                        label="📥 تحميل",
-                        data=audio_data,
-                        file_name=f"{song['title']}.mp3",
-                        mime="audio/mpeg",
-                        key=song['id']
-                    )
-                st.divider()
+            # عرض الأغاني على شكل بطاقات (Cards)
+            for song in data['data']:
+                with st.container():
+                    col1, col2, col3 = st.columns([1, 3, 2])
+                    
+                    with col1:
+                        st.image(song['album']['cover_medium'], width=80)
+                    
+                    with col2:
+                        st.markdown(f"**{song['title']}**")
+                        st.caption(f"Album: {song['album']['title']}")
+                    
+                    with col3:
+                        # زر التحميل المباشر
+                        audio_data = requests.get(song['preview']).content
+                        st.download_button(
+                            label="📥 Download",
+                            data=audio_data,
+                            file_name=f"{song['title']}.mp3",
+                            mime="audio/mpeg",
+                            key=song['id']
+                        )
+                st.markdown("---")
         else:
-            st.warning("مالقينا والو، جرب سمية أخرى.")
-            
-    except Exception as e:
-        st.error("وقع مشكل في السيرفر، عاود جرب.")
-
-st.caption("هاد النسخة كتخدم بسيرفرات Deezer باش نتفاداو بلوك يوتيوب.")
+            st.warning("ما لقينا حتى أغنية، تأكد من السمية.")
+    except:
+        st.error("السيرفر مشغول، عاود جرب.")
