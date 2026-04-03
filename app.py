@@ -1,57 +1,56 @@
 import streamlit as st
-import requests
+import yt_dlp
+import os
 
-# 1. إعدادات الصفحة
+# 1. إعدادات الصفحة واللوغو
 st.set_page_config(page_title="Music VIP", page_icon="logo.png", layout="wide")
 
-# 2. ديزاين فخم
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: white; }
-    .stButton>button { 
-        width: 100%; border-radius: 25px; 
-        background-color: #1DB954; color: white; 
-        font-weight: bold; border: none; padding: 10px;
-    }
-    h1 { color: #1DB954; text-align: center; }
+    .stButton>button { width: 100%; border-radius: 20px; background-color: #1DB954; color: white; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🎵 My Music App - Full Songs")
+st.title("📥 Full Music Downloader")
 
-# 3. محرك البحث باستخدام Deezer (باش نهربو من بلوك يوتيوب)
-query = st.text_input("🔍 اكتب اسم الأغنية كاملة:", placeholder="مثلاً: Tagne - Nadi")
+# 2. محرك البحث
+query = st.text_input("🔍 اكتب اسم الأغنية (كاملة):", placeholder="مثلاً: Tagne - Nadi")
 
 if query:
-    # كنستعملو Deezer API حيت مافيهش البلوك وكيعطي أغاني كاملة في بزاف د الحالات
-    url = f"https://api.deezer.com/search?q={query}"
-    
     try:
-        with st.spinner("🔍 جاري جلب الأغنية كاملة..."):
-            response = requests.get(url).json()
+        with st.status("🔍 جاري البحث والتحميل (الأغنية كاملة)..."):
+            # إعدادات yt-dlp باش نهربو من البلوك
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'default_search': 'ytsearch1',
+                'outtmpl': 'song.mp3',
+                # هاد السطور هما اللي كيمنعو البلوك (403 Forbidden)
+                'quiet': True,
+                'no_warnings': True,
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(query, download=True)
+                title = info['entries'][0]['title']
             
-        if response.get('data'):
-            for track in response['data'][:10]: # كيجيب أحسن 10 نتائج
-                col1, col2, col3 = st.columns([1, 3, 2])
-                with col1:
-                    st.image(track['album']['cover_medium'], width=80)
-                with col2:
-                    st.markdown(f"**{track['title']}**")
-                    st.caption(f"Artist: {track['artist']['name']}")
-                with col3:
-                    # رابط الأغنية
-                    audio_url = track['preview'] 
-                    # ملاحظة: بعض المرات Deezer كيعطي مقطع، ولكن كاينين طرق نجبدوها كاملة
-                    # هاد الزر غادي يخلي المستخدم يتيليشارجي اللي لقى السيرفر
-                    st.download_button(
-                        label="📥 Download Full MP3",
-                        data=requests.get(audio_url).content,
-                        file_name=f"{track['title']}.mp3",
-                        mime="audio/mpeg",
-                        key=str(track['id'])
-                    )
-                st.markdown("---")
-        else:
-            st.warning("مالقيناش هاد الأغنية، جرب تكتب سمية الفنان صحيحة.")
-    except:
-        st.error("السيرفر عامر شوية، عاود جرب.")
+            # زر التحميل للأغنية كاملة
+            with open("song.mp3", "rb") as f:
+                st.download_button(
+                    label=f"📥 Download: {title}",
+                    data=f,
+                    file_name=f"{title}.mp3",
+                    mime="audio/mpeg"
+                )
+            
+            # مسح الملف من السيرفر مورا ما يسالي
+            os.remove("song.mp3")
+
+    except Exception as e:
+        st.error("السيرفر عليه الضغط، عاود جرب مورا شوية.")
