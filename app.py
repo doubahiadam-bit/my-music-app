@@ -4,7 +4,7 @@ import requests
 # 1. إعدادات الصفحة والأيقونة (تأكد من وجود logo.png في GitHub)
 st.set_page_config(page_title="Music VIP", page_icon="logo.png", layout="wide")
 
-# 2. ديزاين فخم (CSS مصحح 100%)
+# 2. ديزاين فخم (CSS مصحح)
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: white; }
@@ -20,37 +20,39 @@ st.markdown("""
 
 st.title("🎧 My Music App")
 
-# 3. خانة البحث
-artist = st.text_input("👤 اكتب اسم الفنان أو الأغنية:", placeholder="مثلاً: Tagne, Toto, Inna...")
+# 3. محرك البحث
+query = st.text_input("👤 اكتب اسم الفنان أو الأغنية:", placeholder="مثلاً: Tagne, Toto, Saad Lamjarred...")
 
-if artist:
+if query:
     # جلب الأغاني من iTunes (أغاني كاملة وبلا بلوك)
-    url = f"https://itunes.apple.com/search?term={artist}&entity=song&limit=30"
+    url = f"https://itunes.apple.com/search?term={query}&entity=song&limit=25"
     
     try:
-        response = requests.get(url).json()
-        if response['resultCount'] > 0:
-            st.success(f"لقينا {response['resultCount']} أغنية!")
+        with st.spinner("🔍 جاري البحث..."):
+            response = requests.get(url).json()
+            
+        if response.get('resultCount', 0) > 0:
             for song in response['results']:
                 with st.container():
                     col1, col2, col3 = st.columns([1, 3, 2])
                     with col1:
-                        st.image(song['artworkUrl100'], width=80)
+                        st.image(song.get('artworkUrl100'), width=80)
                     with col2:
-                        st.markdown(f"**{song['trackName']}**")
-                        st.caption(f"Artist: {song['artistName']}")
+                        st.markdown(f"**{song.get('trackName')}**")
+                        st.caption(f"Artist: {song.get('artistName')}")
                     with col3:
-                        # تحميل الأغنية كاملة
-                        audio_data = requests.get(song['previewUrl']).content
-                        st.download_button(
-                            label="📥 Download",
-                            data=audio_data,
-                            file_name=f"{song['trackName']}.mp3",
-                            mime="audio/mpeg",
-                            key=str(song['trackId'])
-                        )
+                        audio_url = song.get('previewUrl')
+                        if audio_url:
+                            audio_data = requests.get(audio_url).content
+                            st.download_button(
+                                label="📥 Download",
+                                data=audio_data,
+                                file_name=f"{song.get('trackName')}.mp3",
+                                mime="audio/mpeg",
+                                key=str(song.get('trackId'))
+                            )
                 st.markdown("---")
         else:
-            st.warning("ما لقينا والو، جرب سمية أخرى.")
-    except:
-        st.error("مشكل في الاتصال، جرب مورا شوية.")
+            st.warning("مالقينا والو، جرب سمية أخرى.")
+    except Exception as e:
+        st.error("السيرفر مشغول، عاود جرب مورا شوية.")
