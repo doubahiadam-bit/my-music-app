@@ -1,10 +1,10 @@
 import streamlit as st
 import requests
 
-# 1. إعدادات الصفحة والأيقونة (تأكد من وجود logo.png في GitHub)
+# 1. إعدادات الصفحة والأيقونة
 st.set_page_config(page_title="Music VIP", page_icon="logo.png", layout="wide")
 
-# 2. ديزاين فخم (CSS مصحح)
+# 2. ديزاين فخم (CSS)
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: white; }
@@ -24,9 +24,7 @@ st.title("🎧 My Music App")
 query = st.text_input("👤 اكتب اسم الفنان أو الأغنية:", placeholder="مثلاً: Tagne, Toto, Saad Lamjarred...")
 
 if query:
-    # جلب الأغاني من iTunes (أغاني كاملة وبلا بلوك)
     url = f"https://itunes.apple.com/search?term={query}&entity=song&limit=25"
-    
     try:
         with st.spinner("🔍 جاري البحث..."):
             response = requests.get(url).json()
@@ -54,5 +52,5 @@ if query:
                 st.markdown("---")
         else:
             st.warning("مالقينا والو، جرب سمية أخرى.")
-    except Exception as e:
-        st.error("السيرفر مشغول، عاود جرب مورا شوية.")
+    except:
+        st.error("مشكل في الاتصال، عاود جرب.")
