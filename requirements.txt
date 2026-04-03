@@ -1,3 +1,2 @@
 streamlit
-youtube-search-python
 yt-dlp
