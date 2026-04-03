@@ -5,39 +5,47 @@ import os
 st.set_page_config(page_title="Music Downloader", page_icon="🎵")
 st.title("🎵 Music Downloader")
 
-song_name = st.text_input("اكتب اسم الأغنية هنا:")
+song_name = st.text_input("اكتب اسم الأغنية (مثلاً: Saad Lamjarred Casablanca)")
 
 if song_name:
-    with st.status("🔍 جاري البحث..."):
-        # هاد الإعدادات كتخلي اليوتيوب يظن أنك داخل من متصفح عادي
+    with st.status("🔍 جاري البحث والتحميل من السيرفر..."):
+        # هاد الإعدادات هي "الضربة القاضية" للبلوك
         ydl_opts = {
             'format': 'bestaudio/best',
-            'default_search': 'ytsearch',
-            'quiet': True,
+            'default_search': 'ytsearch1', # غايقلب غير على فيديو واحد باش ما يعيقش
+            'nocheckcertificate': True,
+            'ignoreerrors': True,
             'no_warnings': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'quiet': True,
+            'extract_audio': True,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
-                'preferredquality': '192',
+                'preferredquality': '128', # جودة متوسطة باش يكون التحميل سريع وما يتبلوكاش
             }],
-            'outtmpl': 'song.%(ext)s',
+            'outtmpl': 'mysong.%(ext)s',
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         }
 
         try:
+            # مسح أي ملف قديم باش ما يوقعش خلط
+            if os.path.exists("mysong.mp3"):
+                os.remove("mysong.mp3")
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([song_name])
             
-            if os.path.exists("song.mp3"):
-                with open("song.mp3", "rb") as file:
-                    st.success("لقيناها! واجدة للتحميل")
+            if os.path.exists("mysong.mp3"):
+                with open("mysong.mp3", "rb") as file:
+                    st.success("✅ لقيناها!")
                     st.download_button(
-                        label="📥 حفظ في الآيفون",
+                        label="📥 حفظ في الآيفون (Files)",
                         data=file,
                         file_name=f"{song_name}.mp3",
                         mime="audio/mpeg"
                     )
-                # مسح الملف باش ما يعمرش السيرفر
-                os.remove("song.mp3")
+            else:
+                st.error("❌ يوتيوب بلوكا السيرفر مؤقتاً. جرب تكتب سمية أغنية أخرى دابا.")
+
         except Exception as e:
-            st.error(f"عيا يوتيوب وحبسنا! جرب أغنية أخرى أو تسنى دقيقة.")
+            st.error("⚠️ وقع مشكل في الاتصال، جرب مرة أخرى مورا 10 ثواني.")
